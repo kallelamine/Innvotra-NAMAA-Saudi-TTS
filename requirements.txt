@@ -1,0 +1,8 @@
+torch>=2.0.0
+torchaudio>=2.0.0
+huggingface-hub>=0.20.0
+safetensors>=0.4.0
+python-dotenv>=1.0.0
+chatterbox-tts
+numpy>=1.24.0
+flask>=3.0.0

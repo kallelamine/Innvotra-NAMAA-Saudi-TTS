@@ -1,0 +1,24 @@
+# Environment
+.env
+venv/
+.venv/
+env/
+
+# Output
+Output_Voice/
+*.wav
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
