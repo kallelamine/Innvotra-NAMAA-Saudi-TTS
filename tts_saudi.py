@@ -176,8 +176,8 @@ def generate_speech(
         output_filename = f"saudi_tts_{safe_text}" if safe_text else "saudi_tts_output"
     
     if not output_filename.endswith('.wav'):
-        output_filename += '.wav'
-    
+        output_filename = output_filename.replace('.mp3', '') + '.wav'
+
     output_path = OUTPUT_DIR / output_filename
     ta.save(str(output_path), wav, model.sr)
     print(f"Audio saved to: {output_path}")

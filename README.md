@@ -1,34 +1,42 @@
-# Innvotra NAMAA Saudi TTS
+# Arabic TTS — NAMAA & SILMA
 
-**صوت طبيعي — تحويل النص من العربية إلى اللهجة السعودية**  
-*Natural voice — Convert text from Arabic to Saudi dialect*
+**صوت طبيعي — تحويل النص من العربية إلى اللهجة السعودية أو العربية الفصحى**  
+*Natural voice — Convert text from Arabic to Saudi dialect or Modern Standard Arabic*
 
-A Text-to-Speech application that generates natural **Saudi dialect Arabic** speech from text. Built on the [NAMAA-Saudi-TTS](https://huggingface.co/NAMAA-Space/NAMAA-Saudi-TTS) model from Hugging Face, with a Flask web interface for easy use.
+A Text-to-Speech application that generates natural Arabic speech. Choose between two engines:
+
+- **NAMAA Saudi TTS** — Local model (Hugging Face), Saudi dialect, runs on your machine
+- **SILMA TTS API** — Cloud API, Saudi dialect or MSA, multiple voices and models
+
+NAMAA outputs **WAV** (no external tools), SILMA outputs **MP3**. Flask web interface included.
 
 ---
 
 ## Features
 
-- **Saudi dialect output** — Generates natural Saudi Arabic speech (not Modern Standard Arabic)
-- **Web UI** — Flask interface with text input, parameter controls, and audio playback
-- **CLI mode** — Run TTS from the command line via `tts_saudi.py`
-- **Voice cloning** — Optional reference audio for custom voice/style transfer
-- **Tunable parameters** — Exaggeration, temperature, CFG weight, seed (matching [HF Space demo](https://huggingface.co/spaces/omarelshehy/NAMAA-Saudi-Voice))
+- **Model choice** — Switch between NAMAA (local) and SILMA (API) in the Web UI
+- **Saudi dialect & MSA** — NAMAA for Saudi; SILMA for Saudi or Modern Standard Arabic
+- **WAV (NAMAA) / MP3 (SILMA)** — NAMAA saves WAV directly; SILMA uses bundled ffmpeg for MP3
+- **Web UI** — Text input, parameter controls, audio playback
+- **CLI mode** — Run NAMAA TTS from the command line via `tts_saudi.py`
+- **Voice cloning (NAMAA)** — Optional reference audio for custom voice/style transfer
+- **Multiple voices (SILMA)** — Sulaiman, Salma, Salman, Sarah, Sam, Samantha; plus custom voices
 
 ---
 
 ## Project Structure
 
 ```
-Innvotra-NAMAA-Saudi-TTS/
+Arabic-TTS/
 ├── app.py              # Flask web application
-├── tts_saudi.py        # TTS engine (model loading + speech generation)
+├── tts_saudi.py        # NAMAA TTS engine (local)
+├── tts_silma.py        # SILMA TTS API client (cloud)
 ├── requirements.txt    # Python dependencies
-├── .env                # Hugging Face token (create this, do not commit)
-├── .env.example        # Example env file (optional)
+├── .env                # Tokens and keys (create this, do not commit)
+├── .env.example        # Example env file
 ├── templates/
 │   └── index.html      # Web UI
-└── Output_Voice/       # Generated audio files
+└── Output_Voice/       # Generated audio (WAV from NAMAA, MP3 from SILMA)
 ```
 
 ---
@@ -36,8 +44,11 @@ Innvotra-NAMAA-Saudi-TTS/
 ## Prerequisites
 
 - **Python 3.9+**
-- **CUDA** (recommended) or CPU
-- **Hugging Face account** with access to [NAMAA-Space/NAMAA-Saudi-TTS](https://huggingface.co/NAMAA-Space/NAMAA-Saudi-TTS)
+- **CUDA** (recommended for NAMAA) or CPU
+- **Hugging Face account** — for NAMAA model access
+- **SILMA account** — for SILMA API (get API key and User ID from [app.silma.ai](https://app.silma.ai/api-keys))
+
+> **Note:** NAMAA outputs WAV directly (no extra tools). SILMA uses `imageio-ffmpeg` for MP3 (no system ffmpeg needed).
 
 ---
 
@@ -70,57 +81,113 @@ pip install -r requirements.txt
 
 Create a `.env` file in the project root:
 
-```
+```env
+# Required for NAMAA (local model)
 HF_token=your_huggingface_token_here
+
+# Required for SILMA (API)
+SILMA_API_KEY=your_silma_api_key_here
+SILMA_USER_ID=your_silma_user_id_here
 ```
 
-Get your token from [Hugging Face Settings → Access Tokens](https://huggingface.co/settings/tokens). You need read access to the NAMAA-Saudi-TTS model.
+- **HF_token** — Get from [Hugging Face → Access Tokens](https://huggingface.co/settings/tokens). Need read access to NAMAA-Saudi-TTS.
+- **SILMA_API_KEY** & **SILMA_USER_ID** — Get from [SILMA API Keys](https://app.silma.ai/api-keys).
 
 ---
 
-## How to Run
+## How to Use the Platform
 
-### Web UI (Flask)
+### Web UI
 
-```bash
-python app.py
-```
+1. Start the server:
 
-Then open **http://127.0.0.1:5000** in your browser.
+   ```bash
+   python app.py
+   ```
 
-### Command Line (CLI)
+2. Open **http://127.0.0.1:5000** in your browser.
+
+3. Enter or paste Arabic text in the text area (up to 500 characters for SILMA, 300 for NAMAA).
+
+4. Choose a model:
+   - **NAMAA Saudi (محلي)** — Local inference, Saudi dialect, uses exaggeration, temperature, CFG, seed
+   - **SILMA TTS (API)** — Cloud API, choose model (KSA/MSA), voice, speed, and other options
+
+5. Adjust parameters for the selected model (see options below).
+
+6. Click **توليد الصوت** (Generate voice).
+
+7. Play the generated audio in the player below.
+
+### Command Line (NAMAA only)
 
 ```bash
 python tts_saudi.py
 ```
 
-This runs the main script with example texts and saves audio to `Output_Voice/`.
+This runs example generations and saves WAV files to `Output_Voice/`.
 
 ---
 
 ## Options & Parameters
 
-### Text Input
+### NAMAA Saudi TTS (local)
 
-- **Max 300 characters** — Text is truncated to 300 characters (matching the Hugging Face demo)
-- **Saudi dialect recommended** — Best results with Saudi dialect text; MSA is also supported
+| Parameter       | Default | Range    | Description                                      |
+|----------------|---------|----------|--------------------------------------------------|
+| **exaggeration** | 0.5   | 0.25–2.0 | Emotion/expressiveness                           |
+| **temperature**  | 0.8   | 0.05–5.0 | Randomness (lower = more consistent)             |
+| **cfg_weight**   | 0.5   | 0.0–1.0  | Classifier-free guidance / pace control          |
+| **seed**         | 0     | 0 = random | Reproducibility (use > 0 for same output)     |
 
-### TTS Parameters
+- **reference_audio_path** — Optional 3–10 second WAV/FLAC in Saudi dialect for voice cloning
 
-| Parameter      | Default | Range   | Description                                              |
-|----------------|---------|---------|----------------------------------------------------------|
-| **exaggeration** | 0.5   | 0.25–2.0 | Emotion/expressiveness. Lower = calmer, higher = more expressive |
-| **temperature**  | 0.8   | 0.05–5.0 | Randomness. Lower = more consistent, higher = more varied |
-| **cfg_weight**   | 0.5   | 0.0–1.0  | Classifier-free guidance / pace control                 |
-| **seed**         | 0     | 0 = random | Reproducibility. Use any integer > 0 for same output   |
+### SILMA TTS (API)
 
-### Voice Cloning (Optional)
+| Parameter           | Default   | Description                                    |
+|--------------------|-----------|------------------------------------------------|
+| **model_id**       | silma-tts-pro-ksa-large | KSA large/small, MSA large/small       |
+| **reference_audio_id** | Sulaiman | Voice: Sulaiman, Salma, Salman, Sarah, Sam, Samantha |
+| **nfe_steps**      | 16        | Speed/quality trade-off                        |
+| **seed**           | 42        | Reproducibility                                |
+| **speaking_speed** | 1.1       | Speech speed (increments of 0.1)               |
+| **remove_silence** | false     | Strip silence from output                      |
+| **use_ema**        | auto      | false for KSA, true for MSA                    |
+| **normalize_numbers** | true  | Convert numbers to words                       |
 
-- **reference_audio_path** — Path to a 3–10 second audio file (WAV/FLAC) in Saudi dialect
-- Used for voice/style transfer
-- If not provided, the model uses its default Saudi voice
+- **pronunciation_overrides** — JSON object for custom pronunciations (e.g. `{"اكل":"اُكِل"}`)
 
-### Python API Example
+---
+
+## Use Cases
+
+### When to use NAMAA Saudi TTS (local)
+
+| Use case | Why NAMAA |
+|----------|-----------|
+| **Offline / on-premise** | Runs locally, no external API calls |
+| **Privacy & data control** | Text and audio stay on your machine |
+| **High-volume / cost control** | No per-request API fees |
+| **Saudi dialect focus** | Tuned for Saudi Arabic |
+| **Voice cloning** | Use reference audio for custom voices |
+| **Research / experimentation** | Full control over model and parameters |
+
+### When to use SILMA TTS (API)
+
+| Use case | Why SILMA |
+|----------|-----------|
+| **No GPU or heavy setup** | Runs in the cloud, lightweight client |
+| **Modern Standard Arabic (MSA)** | Dedicated MSA models (msa-large, msa-small) |
+| **Multiple voices** | Built-in Sulaiman, Salma, Salman, Sarah, Sam, Samantha |
+| **Custom voices** | Use Voice IDs from [app.silma.ai/voices](https://app.silma.ai/voices) |
+| **Faster prototyping** | No model download, works immediately |
+| **Pronunciation control** | Pronunciation overrides and server-side customization |
+
+---
+
+## Python API Examples
+
+### NAMAA
 
 ```python
 from tts_saudi import initialize_model, generate_speech
@@ -134,88 +201,53 @@ output_path = generate_speech(
     temperature=0.8,
     cfg_weight=0.5,
     seed=0,
-    reference_audio_path=None,  # or "path/to/voice.wav"
+    reference_audio_path=None,
     device="cuda"
 )
-# Audio saved to Output_Voice/
+# WAV saved to Output_Voice/
+```
+
+### SILMA
+
+```python
+from tts_silma import generate_speech
+
+output_path = generate_speech(
+    text="بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ",
+    model_id="silma-tts-pro-ksa-large",
+    reference_audio_id="Sulaiman",
+    nfe_steps=16,
+    seed=42,
+    speaking_speed=1.1,
+)
+# MP3 saved to Output_Voice/
 ```
 
 ---
 
-## Pushing to GitHub
+## Models
 
-### 1. Create a `.gitignore` file
-
-Create `.gitignore` in the project root:
-
-```
-# Environment
-.env
-venv/
-.venv/
-env/
-
-# Output
-Output_Voice/
-*.wav
-
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.eggs/
-dist/
-build/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-```
-
-### 2. Initialize Git (if not already)
-
-```bash
-git init
-```
-
-### 3. Add remote and push
-
-```bash
-git remote add origin https://github.com/kallelamine/Innvotra-NAMAA-Saudi-TTS.git
-git add .
-git commit -m "Initial commit: NAMAA Saudi TTS with Flask UI"
-git branch -M main
-git push -u origin main
-```
-
-### 4. Optional: Create `.env.example`
-
-For others to know what to configure:
-
-```
-HF_token=your_huggingface_token_here
-```
-
-Do **not** commit `.env` — it contains your secret token.
-
----
-
-## Model
+### NAMAA
 
 - **Base model**: [NAMAA-Space/NAMAA-Saudi-TTS](https://huggingface.co/NAMAA-Space/NAMAA-Saudi-TTS)
 - **Architecture**: Chatterbox Multilingual TTS (ResembleAI)
-- **Output**: Saudi dialect Arabic speech (WAV)
+- **Output**: Saudi dialect Arabic, WAV
 - **License**: MIT
+
+### SILMA
+
+- **API**: [SILMA TTS API](https://dev.silma.ai/apis/silma-tts-api-1)
+- **Models**: KSA (Saudi) and MSA (Modern Standard Arabic), large and small variants
+- **Output**: MP3
+- **Voices**: Default (Sulaiman, Salma, etc.) or custom from your account
 
 ---
 
 ## Limitations
 
-- Lack of tashkeel (diacritics) may affect pronunciation
-- Numeric normalization may be improved in future versions
-- GPU recommended for faster inference
+- NAMAA: Lack of tashkeel may affect pronunciation; GPU recommended
+- SILMA: Requires internet and API quota
+- Text limits: 300 chars (NAMAA), 500 chars (SILMA) in the Web UI
 
 ---
 
@@ -228,5 +260,5 @@ MIT License — see [NAMAA-Saudi-TTS](https://huggingface.co/NAMAA-Space/NAMAA-S
 ## Acknowledgments
 
 - [NAMAA Community](https://huggingface.co/NAMAA-Space) — Saudi dialect TTS model
+- [SILMA](https://silma.ai) — Arabic TTS API
 - [Resemble AI](https://github.com/resemble-ai/chatterbox) — Chatterbox TTS architecture
-- [Hugging Face Space demo](https://huggingface.co/spaces/omarelshehy/NAMAA-Saudi-Voice) — Parameter reference

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAMAA Saudi TTS</title>
+    <title>Arabic TTS — NAMAA & SILMA</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -122,49 +122,127 @@
         .accordion { margin-top: 12px; }
         .accordion summary { cursor: pointer; font-weight: 600; color: #555; }
         .accordion-content { padding: 12px 0 0 0; }
+        .model-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .model-tab {
+            flex: 1; padding: 14px; border: 2px solid var(--border); border-radius: 10px;
+            background: var(--card); font-weight: 600; cursor: pointer; text-align: center;
+            transition: all 0.2s;
+        }
+        .model-tab:hover { border-color: var(--primary); background: #f0faf0; }
+        .model-tab.active { border-color: var(--primary); background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; }
+        .params-section { display: none; }
+        .params-section.active { display: block; }
+        select {
+            width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+            font-size: 14px; font-family: inherit;
+        }
+        .checkbox-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .checkbox-row input[type="checkbox"] { width: 18px; height: 18px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="hero">
-            <h1>🇸🇦 NAMAA Saudi TTS</h1>
-            <p>صوت طبيعي — تحويل النص من العربية إلى اللهجة السعودية</p>
+            <h1>🇸🇦 Arabic TTS</h1>
+            <p>صوت طبيعي — NAMAA (محلي) أو SILMA (API)</p>
         </div>
 
         <div class="card">
             <label for="text">النص (لهجة سعودية)</label>
-            <textarea id="text" placeholder="اكتب النص هنا..." maxlength="300">آبي أروح البقالة أشتري كم غرض وأرجع بسرعة.</textarea>
-            <p style="font-size: 12px; color: #666; margin-top: 4px;"><span id="charCount">0</span> / 300</p>
+            <textarea id="text" placeholder="اكتب النص هنا..." maxlength="500">آبي أروح البقالة أشتري كم غرض وأرجع بسرعة.</textarea>
+            <p style="font-size: 12px; color: #666; margin-top: 4px;"><span id="charCount">0</span> / 500</p>
 
             <p style="font-size: 13px; margin: 12px 0 6px 0; font-weight: 600;">اختر مثال:</p>
             <div class="examples-list" id="examples"></div>
         </div>
 
         <div class="card">
-            <label>Exaggeration (التعبير)</label>
-            <div class="row slider-row">
-                <label>0.25</label>
-                <input type="range" id="exaggeration" min="0.25" max="2" step="0.05" value="0.5">
-                <span class="slider-value" id="exaggerationVal">0.5</span>
+            <label>اختر النموذج</label>
+            <div class="model-tabs">
+                <div class="model-tab active" data-model="namaa">NAMAA Saudi (محلي)</div>
+                <div class="model-tab" data-model="silma">SILMA TTS (API)</div>
             </div>
-            <label>Temperature (التباين)</label>
-            <div class="row slider-row">
-                <label>0.05</label>
-                <input type="range" id="temperature" min="0.05" max="2" step="0.05" value="0.8">
-                <span class="slider-value" id="temperatureVal">0.8</span>
-            </div>
-            <label>CFG / Pace</label>
-            <div class="row slider-row">
-                <label>0</label>
-                <input type="range" id="cfg_weight" min="0" max="1" step="0.05" value="0.5">
-                <span class="slider-value" id="cfgVal">0.5</span>
-            </div>
-            <div class="row">
-                <div>
-                    <label for="seed">Seed (0 = عشوائي)</label>
-                    <input type="number" id="seed" value="0" min="0" step="1">
+
+            <div id="paramsNamaa" class="params-section active">
+                <label>Exaggeration (التعبير)</label>
+                <div class="row slider-row">
+                    <label>0.25</label>
+                    <input type="range" id="exaggeration" min="0.25" max="2" step="0.05" value="0.5">
+                    <span class="slider-value" id="exaggerationVal">0.5</span>
+                </div>
+                <label>Temperature (التباين)</label>
+                <div class="row slider-row">
+                    <label>0.05</label>
+                    <input type="range" id="temperature" min="0.05" max="2" step="0.05" value="0.8">
+                    <span class="slider-value" id="temperatureVal">0.8</span>
+                </div>
+                <label>CFG / Pace</label>
+                <div class="row slider-row">
+                    <label>0</label>
+                    <input type="range" id="cfg_weight" min="0" max="1" step="0.05" value="0.5">
+                    <span class="slider-value" id="cfgVal">0.5</span>
+                </div>
+                <div class="row">
+                    <div>
+                        <label for="seed">Seed (0 = عشوائي)</label>
+                        <input type="number" id="seed" value="0" min="0" step="1">
+                    </div>
                 </div>
             </div>
+
+            <div id="paramsSilma" class="params-section">
+                <label for="model_id">Model ID</label>
+                <select id="model_id">
+                    {% for id, desc in silma_models.items() %}
+                    <option value="{{ id }}">{{ id }} — {{ desc }}</option>
+                    {% endfor %}
+                </select>
+                <div class="row" style="margin-top: 12px;">
+                    <div style="flex: 1;">
+                        <label for="reference_audio_id">Voice</label>
+                        <select id="reference_audio_id">
+                            {% for v in silma_voices %}
+                            <option value="{{ v }}">{{ v }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="nfe_steps">NFE Steps</label>
+                        <input type="number" id="nfe_steps" value="16" min="8" max="32" step="1">
+                    </div>
+                </div>
+                <div class="row" style="margin-top: 12px;">
+                    <div style="flex: 1;">
+                        <label for="seed_silma">Seed</label>
+                        <input type="number" id="seed_silma" value="42" min="0" step="1">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="speaking_speed">Speaking Speed</label>
+                        <input type="number" id="speaking_speed" value="1.1" min="0.5" max="2" step="0.1">
+                    </div>
+                </div>
+                <div class="checkbox-row" style="margin-top: 12px;">
+                    <input type="checkbox" id="remove_silence">
+                    <label for="remove_silence" style="margin: 0;">Remove silence</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="use_ema">
+                    <label for="use_ema" style="margin: 0;">Use EMA (auto for MSA)</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="normalize_numbers" checked>
+                    <label for="normalize_numbers" style="margin: 0;">Normalize numbers</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="enable_server_pronunciation_overrides">
+                    <label for="enable_server_pronunciation_overrides" style="margin: 0;">Server pronunciation overrides</label>
+                </div>
+                <div style="margin-top: 12px;">
+                    <label for="pronunciation_overrides">Pronunciation overrides (JSON optional)</label>
+                    <input type="text" id="pronunciation_overrides" placeholder='{"اكل":"اُكِل"}' style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;">
+                </div>
+            </div>
+
             <div class="btn-group" style="margin-top: 16px;">
                 <button class="btn btn-primary" id="generate">🔊 توليد الصوت</button>
             </div>
@@ -195,6 +273,22 @@
         const audioEl = document.getElementById('audio');
         const examplesEl = document.getElementById('examples');
 
+        const modelTabs = document.querySelectorAll('.model-tab');
+        const paramsNamaa = document.getElementById('paramsNamaa');
+        const paramsSilma = document.getElementById('paramsSilma');
+
+        let selectedModel = 'namaa';
+
+        modelTabs.forEach(tab => {
+            tab.onclick = () => {
+                modelTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                selectedModel = tab.dataset.model;
+                paramsNamaa.classList.toggle('active', selectedModel === 'namaa');
+                paramsSilma.classList.toggle('active', selectedModel === 'silma');
+            };
+        });
+
         const examples = {{ examples | tojson }};
         examples.forEach(t => {
             const chip = document.createElement('span');
@@ -215,6 +309,36 @@
         temperature.oninput = () => { temperatureVal.textContent = temperature.value; };
         cfgWeight.oninput = () => { cfgVal.textContent = cfgWeight.value; };
 
+        function buildPayload() {
+            const text = textEl.value.trim();
+            const base = { text };
+            if (selectedModel === 'namaa') {
+                base.model = 'namaa';
+                base.exaggeration = parseFloat(exaggeration.value);
+                base.temperature = parseFloat(temperature.value);
+                base.cfg_weight = parseFloat(cfgWeight.value);
+                base.seed = parseInt(seed.value) || 0;
+            } else {
+                base.model = 'silma';
+                base.model_id = document.getElementById('model_id').value;
+                base.reference_audio_id = document.getElementById('reference_audio_id').value;
+                base.nfe_steps = parseInt(document.getElementById('nfe_steps').value) || 16;
+                base.seed = parseInt(document.getElementById('seed_silma').value) ?? 42;
+                base.speaking_speed = parseFloat(document.getElementById('speaking_speed').value) || 1.1;
+                base.remove_silence = document.getElementById('remove_silence').checked;
+                base.use_ema = document.getElementById('use_ema').checked ? true : null;
+                base.normalize_numbers = document.getElementById('normalize_numbers').checked;
+                base.enable_server_pronunciation_overrides = document.getElementById('enable_server_pronunciation_overrides').checked;
+                const overridesRaw = document.getElementById('pronunciation_overrides').value.trim();
+                if (overridesRaw) {
+                    try {
+                        base.pronunciation_overrides = JSON.parse(overridesRaw);
+                    } catch (_) {}
+                }
+            }
+            return base;
+        }
+
         generateBtn.onclick = async () => {
             const text = textEl.value.trim();
             if (!text) {
@@ -231,13 +355,7 @@
                 const res = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        text,
-                        exaggeration: parseFloat(exaggeration.value),
-                        temperature: parseFloat(temperature.value),
-                        cfg_weight: parseFloat(cfgWeight.value),
-                        seed: parseInt(seed.value) || 0,
-                    }),
+                    body: JSON.stringify(buildPayload()),
                 });
                 const data = await res.json();
 

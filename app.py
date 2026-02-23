@@ -14,6 +14,7 @@ except ImportError:
 
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from tts_saudi import initialize_model, generate_speech
+from tts_silma import generate_speech as silma_generate_speech, MODELS, VOICES
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max upload
@@ -49,7 +50,12 @@ def get_model():
 @app.route("/")
 def index():
     """Serve the main UI."""
-    return render_template("index.html", examples=SAUDI_EXAMPLES)
+    return render_template(
+        "index.html",
+        examples=SAUDI_EXAMPLES,
+        silma_models=MODELS,
+        silma_voices=VOICES,
+    )
 
 
 @app.route("/api/generate", methods=["POST"])
@@ -61,25 +67,50 @@ def api_generate():
         if not text:
             return jsonify({"error": "Text is required"}), 400
 
-        exaggeration = float(data.get("exaggeration", 0.5))
-        temperature = float(data.get("temperature", 0.8))
-        cfg_weight = float(data.get("cfg_weight", 0.5))
-        seed = int(data.get("seed", 0))
-        reference_path = data.get("reference_audio_path") or None
+        model_choice = data.get("model", "namaa")  # "namaa" or "silma"
 
-        model = get_model()
-        filename = f"tts_{uuid.uuid4().hex[:12]}.wav"
-        output_path = generate_speech(
-            model,
-            text,
-            output_filename=filename,
-            reference_audio_path=reference_path,
-            exaggeration=exaggeration,
-            temperature=temperature,
-            seed=seed,
-            cfg_weight=cfg_weight,
-            device=DEVICE,
-        )
+        if model_choice == "silma":
+            # SILMA TTS API
+            filename = f"tts_{uuid.uuid4().hex[:12]}.mp3"
+            output_path = silma_generate_speech(
+                text,
+                output_filename=filename,
+                model_id=data.get("model_id", "silma-tts-pro-ksa-large"),
+                reference_audio_id=data.get("reference_audio_id", "Sulaiman"),
+                nfe_steps=int(data.get("nfe_steps", 16)),
+                seed=int(data.get("seed", 42)),
+                remove_silence=bool(data.get("remove_silence", False)),
+                speaking_speed=float(data.get("speaking_speed", 1.1)),
+                use_ema=data.get("use_ema") if data.get("use_ema") is not None else None,
+                normalize_numbers=bool(data.get("normalize_numbers", True)),
+                pronunciation_overrides=data.get("pronunciation_overrides") or None,
+                custom_ref_audio=data.get("custom_ref_audio") or None,
+                enable_server_pronunciation_overrides=bool(
+                    data.get("enable_server_pronunciation_overrides", False)
+                ),
+                user_id=data.get("user_id") or None,
+            )
+        else:
+            # NAMAA Saudi TTS (default)
+            exaggeration = float(data.get("exaggeration", 0.5))
+            temperature = float(data.get("temperature", 0.8))
+            cfg_weight = float(data.get("cfg_weight", 0.5))
+            seed = int(data.get("seed", 0))
+            reference_path = data.get("reference_audio_path") or None
+
+            model = get_model()
+            filename = f"tts_{uuid.uuid4().hex[:12]}.wav"
+            output_path = generate_speech(
+                model,
+                text,
+                output_filename=filename,
+                reference_audio_path=reference_path,
+                exaggeration=exaggeration,
+                temperature=temperature,
+                seed=seed,
+                cfg_weight=cfg_weight,
+                device=DEVICE,
+            )
 
         # Return relative URL for the audio file
         rel_path = Path(output_path).name
@@ -94,8 +125,9 @@ def api_generate():
 
 @app.route("/audio/<path:filename>")
 def serve_audio(filename):
-    """Serve generated audio files."""
-    return send_from_directory(OUTPUT_DIR, filename, mimetype="audio/wav")
+    """Serve generated audio files (WAV for NAMAA, MP3 for SILMA)."""
+    mimetype = "audio/mpeg" if filename.lower().endswith(".mp3") else "audio/wav"
+    return send_from_directory(OUTPUT_DIR, filename, mimetype=mimetype)
 
 
 @app.route("/api/examples")
