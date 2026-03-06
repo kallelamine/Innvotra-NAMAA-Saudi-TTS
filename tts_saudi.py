@@ -24,35 +24,38 @@ OUTPUT_DIR = Path("Output_Voice")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 def initialize_model(device="cuda"):
-    print("Downloading model from Hugging Face...")
-    try:
+    default_cache = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
+    cache_exists = os.path.exists(
+        os.path.join(default_cache, "models--NAMAA-Space--NAMAA-Saudi-TTS", "snapshots")
+    )
+
+    if cache_exists:
+        print("Loading model from cache...")
+        try:
+            ckpt_dir = snapshot_download(
+                repo_id="NAMAA-Space/NAMAA-Saudi-TTS",
+                repo_type="model",
+                revision="main",
+                token=HF_TOKEN if HF_TOKEN else None,
+                local_files_only=True,
+            )
+        except Exception:
+            print("Cache incomplete, downloading missing files...")
+            ckpt_dir = snapshot_download(
+                repo_id="NAMAA-Space/NAMAA-Saudi-TTS",
+                repo_type="model",
+                revision="main",
+                token=HF_TOKEN if HF_TOKEN else None,
+            )
+    else:
+        print("Downloading model from Hugging Face (one-time)...")
         ckpt_dir = snapshot_download(
             repo_id="NAMAA-Space/NAMAA-Saudi-TTS",
             repo_type="model",
             revision="main",
-            token=HF_TOKEN if HF_TOKEN else None
+            token=HF_TOKEN if HF_TOKEN else None,
         )
-    except OSError as e:
-        if "symlink" in str(e).lower() or "privilège" in str(e).lower() or "privilege" in str(e).lower():
-            print("Symlink error detected. Trying to use cached files directly...")
-            default_cache = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
-            cache_dir = os.path.join(default_cache, "models--NAMAA-Space--NAMAA-Saudi-TTS", "snapshots")
-            if os.path.exists(cache_dir):
-                snapshots = [d for d in os.listdir(cache_dir) if os.path.isdir(os.path.join(cache_dir, d))]
-                if snapshots:
-                    ckpt_dir = os.path.join(cache_dir, snapshots[0])
-                    print(f"Using cached model from: {ckpt_dir}")
-                    required_file = os.path.join(ckpt_dir, "t3_mtl23ls_v2.safetensors")
-                    if not os.path.exists(required_file):
-                        print(f"Warning: Required file not found at {required_file}")
-                        raise e
-                else:
-                    raise e
-            else:
-                raise e
-        else:
-            raise e
-    
+
     print("Loading model...")
     if device == "cpu":
         original_torch_load = torch.load

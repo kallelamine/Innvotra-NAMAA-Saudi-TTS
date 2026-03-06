@@ -144,7 +144,7 @@
     <div class="container">
         <div class="hero">
             <h1>🇸🇦 Arabic TTS</h1>
-            <p>صوت طبيعي — NAMAA (محلي) أو SILMA (API)</p>
+            <p>صوت طبيعي — NAMAA، SILMA، أو SILMA V2 (Streaming)</p>
         </div>
 
         <div class="card">
@@ -161,6 +161,7 @@
             <div class="model-tabs">
                 <div class="model-tab active" data-model="namaa">NAMAA Saudi (محلي)</div>
                 <div class="model-tab" data-model="silma">SILMA TTS (API)</div>
+                <div class="model-tab" data-model="silma_v2">SILMA TTS V2 (Streaming)</div>
             </div>
 
             <div id="paramsNamaa" class="params-section active">
@@ -243,8 +244,29 @@
                 </div>
             </div>
 
+            <div id="paramsSilmaV2" class="params-section">
+                <label for="voice_id_v2">Reference Voice</label>
+                <select id="voice_id_v2">
+                    <option value="sarah">Sarah</option>
+                    <option value="salman">Salman</option>
+                </select>
+                <label style="margin-top: 12px;">Speed</label>
+                <div class="row slider-row">
+                    <label>0</label>
+                    <input type="range" id="speed_v2" min="0" max="1" step="0.1" value="0.5">
+                    <span class="slider-value" id="speedVal_v2">0.5</span>
+                </div>
+                <label>Creativity & Style</label>
+                <div class="row slider-row">
+                    <label>0</label>
+                    <input type="range" id="creativity_v2" min="0" max="1" step="0.1" value="0.5">
+                    <span class="slider-value" id="creativityVal_v2">0.5</span>
+                </div>
+                <p style="font-size: 12px; color: #666; margin-top: 4px;">Max 250 characters for SILMA V2</p>
+            </div>
+
             <div class="btn-group" style="margin-top: 16px;">
-                <button class="btn btn-primary" id="generate">🔊 توليد الصوت</button>
+                <button class="btn btn-primary" id="generate">🔊 توليد والتشغيل</button>
             </div>
         </div>
 
@@ -276,6 +298,7 @@
         const modelTabs = document.querySelectorAll('.model-tab');
         const paramsNamaa = document.getElementById('paramsNamaa');
         const paramsSilma = document.getElementById('paramsSilma');
+        const paramsSilmaV2 = document.getElementById('paramsSilmaV2');
 
         let selectedModel = 'namaa';
 
@@ -286,6 +309,9 @@
                 selectedModel = tab.dataset.model;
                 paramsNamaa.classList.toggle('active', selectedModel === 'namaa');
                 paramsSilma.classList.toggle('active', selectedModel === 'silma');
+                paramsSilmaV2.classList.toggle('active', selectedModel === 'silma_v2');
+                textEl.maxLength = selectedModel === 'silma_v2' ? 250 : 500;
+                updateCharCount();
             };
         });
 
@@ -308,6 +334,12 @@
         exaggeration.oninput = () => { exaggerationVal.textContent = exaggeration.value; };
         temperature.oninput = () => { temperatureVal.textContent = temperature.value; };
         cfgWeight.oninput = () => { cfgVal.textContent = cfgWeight.value; };
+        document.getElementById('speed_v2').oninput = function() {
+            document.getElementById('speedVal_v2').textContent = this.value;
+        };
+        document.getElementById('creativity_v2').oninput = function() {
+            document.getElementById('creativityVal_v2').textContent = this.value;
+        };
 
         function buildPayload() {
             const text = textEl.value.trim();
@@ -318,6 +350,11 @@
                 base.temperature = parseFloat(temperature.value);
                 base.cfg_weight = parseFloat(cfgWeight.value);
                 base.seed = parseInt(seed.value) || 0;
+            } else if (selectedModel === 'silma_v2') {
+                base.model = 'silma_v2';
+                base.voice_id = document.getElementById('voice_id_v2').value;
+                base.speed = parseFloat(document.getElementById('speed_v2').value) || 0.5;
+                base.creativity = parseFloat(document.getElementById('creativity_v2').value) || 0.5;
             } else {
                 base.model = 'silma';
                 base.model_id = document.getElementById('model_id').value;
@@ -366,6 +403,7 @@
                 statusEl.textContent = 'تم التوليد بنجاح!';
                 audioEl.src = data.audio_url;
                 audioWrapper.style.display = 'block';
+                audioEl.oncanplaythrough = () => { audioEl.play(); };
             } catch (e) {
                 statusEl.className = 'status error';
                 statusEl.textContent = e.message || 'حدث خطأ.';

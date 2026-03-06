@@ -15,6 +15,7 @@ except ImportError:
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from tts_saudi import initialize_model, generate_speech
 from tts_silma import generate_speech as silma_generate_speech, MODELS, VOICES
+from tts_silma_v2 import generate_speech as silma_v2_generate_speech, VOICES as SILMA_V2_VOICES
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max upload
@@ -55,6 +56,7 @@ def index():
         examples=SAUDI_EXAMPLES,
         silma_models=MODELS,
         silma_voices=VOICES,
+        silma_v2_voices=SILMA_V2_VOICES,
     )
 
 
@@ -67,9 +69,19 @@ def api_generate():
         if not text:
             return jsonify({"error": "Text is required"}), 400
 
-        model_choice = data.get("model", "namaa")  # "namaa" or "silma"
+        model_choice = data.get("model", "namaa")  # "namaa", "silma", or "silma_v2"
 
-        if model_choice == "silma":
+        if model_choice == "silma_v2":
+            # SILMA TTS V2 Streaming API
+            filename = f"tts_{uuid.uuid4().hex[:12]}.wav"
+            output_path = silma_v2_generate_speech(
+                text,
+                output_filename=filename,
+                voice_id=data.get("voice_id", "sarah"),
+                speed=float(data.get("speed", 0.5)),
+                creativity=float(data.get("creativity", 0.5)),
+            )
+        elif model_choice == "silma":
             # SILMA TTS API
             filename = f"tts_{uuid.uuid4().hex[:12]}.mp3"
             output_path = silma_generate_speech(
